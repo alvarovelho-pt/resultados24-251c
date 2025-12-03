@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pedagógico - 1º Ciclo</title>
+    <style>
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --primary: #3b82f6;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --level-1-2: #ef4444; /* Insufficient */
+            --level-3: #eab308;   /* Sufficient */
+            --level-4-5: #22c55e; /* Good/Very Good */
+            --diff-positive: #22c55e;
+            --diff-negative: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Layout */
+        .sidebar { width: 280px; background: var(--bg-card); border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; padding: 1.5rem; overflow-y: auto; z-index: 10; }
+        .main-content { flex: 1; padding: 2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* Typography */
+        h1 { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
+        h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; }
+        h3 { font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.75rem; }
+        p { font-size: 0.875rem; color: var(--text-secondary); }
+
+        /* Sidebar Elements */
+        .logo-area { margin-bottom: 2rem; }
+        .stat-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+        .stat-item { padding: 0.75rem; border-radius: 0.5rem; background: #f9fafb; border: 1px solid #e5e7eb; }
+        .stat-item strong { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .stat-item span { font-size: 0.8rem; }
+        .badge { display: inline-block; padding: 0.25em 0.5em; font-size: 0.75rem; border-radius: 999px; font-weight: 600; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+
+        /* Header & Controls */
+        .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-card); padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .grade-toggles { display: flex; background: #f3f4f6; padding: 0.25rem; border-radius: 0.5rem; }
+        .toggle-btn { padding: 0.5rem 1rem; border: none; background: transparent; cursor: pointer; border-radius: 0.375rem; font-weight: 500; font-size: 0.875rem; color: var(--text-secondary); transition: all 0.2s; }
+        .toggle-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .view-switch { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* KPI Cards */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+        .kpi-card { background: var(--bg-card); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .kpi-value { font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-main); }
+        .kpi-label { font-size: 0.875rem; color: var(--text-secondary); }
+        .kpi-bar-container { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 1rem; display: flex; }
+        .kpi-bar { height: 100%; transition: width 0.5s ease; }
+
+        /* Main Chart Area */
+        .chart-container { background: var(--bg-card); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px; display: flex; flex-direction: column; }
+        .chart-header { display: flex; justify-content: space-between; margin-bottom: 1.5rem; align-items: center; }
+        .legend { display: flex; gap: 1rem; font-size: 0.75rem; }
+        .legend-item { display: flex; align-items: center; gap: 0.25rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* SVG Chart Styling */
+        .bar-group text { font-size: 12px; fill: var(--text-secondary); }
+        .bar-rect { transition: height 0.3s, y 0.3s, width 0.3s, x 0.3s; cursor: pointer; }
+        .bar-rect:hover { opacity: 0.9; }
+        .grid-line { stroke: #e5e7eb; stroke-dasharray: 4; }
+        
+        /* Tooltip */
+        .tooltip { position: absolute; background: #1f2937; color: white; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow-y: auto; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
+            .main-content { padding: 1rem; }
+            .header-controls { flex-direction: column; align-items: stretch; }
+            .grade-toggles { overflow-x: auto; }
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <h1>EduDash</h1>
+            <p>1º Ciclo (Anos 1-4)</p>
+            <p style="font-size: 0.75rem; margin-top:0.25rem;">Dados: PDF Ciclo 1</p>
+        </div>
+
+        <h3>Top 3 Disciplinas</h3>
+        <ul class="stat-list" id="top3List">
+            <!-- Populated by JS -->
+        </ul>
+
+        <h3 style="margin-top: 2rem; color: var(--danger);">Atenção Necessária</h3>
+        <p style="font-size: 0.75rem; margin-bottom: 0.5rem;">Maior taxa de insuficiência (Níveis 1+2)</p>
+        <ul class="stat-list" id="attentionList">
+            <!-- Populated by JS -->
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Controls Header -->
+        <header class="header-controls">
+            <div class="grade-toggles">
+                <button class="toggle-btn" onclick="setGrade('cycle')">1º Ciclo</button>
+                <button class="toggle-btn" onclick="setGrade('1')">1º Ano</button>
+                <button class="toggle-btn" onclick="setGrade('2')">2º Ano</button>
+                <button class="toggle-btn" onclick="setGrade('3')">3º Ano</button>
+                <button class="toggle-btn" onclick="setGrade('4')">4º Ano</button>
+            </div>
+
+            <div class="view-switch">
+                <span>Vista Padrão</span>
+                <label class="switch">
+                    <input type="checkbox" id="diffToggle" onchange="toggleView()">
+                    <span class="slider"></span>
+                </label>
+                <span>Diferencial (23/24 vs 24/25)</span>
+            </div>
+            
+            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                Ano Letivo: <strong id="currentYearDisplay">2024/2025 (3º P)</strong>
+            </div>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiContainer">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Main Chart -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 id="chartTitle">Distribuição por Disciplina</h2>
+                <div class="legend" id="chartLegend">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div id="chartCanvas" style="flex: 1; width: 100%; position: relative;">
+                <!-- SVG Chart Injected Here -->
+            </div>
+        </div>
+
+    </main>
+
+    <div id="tooltip" class="tooltip"></div>
+
+<script>
+    /**
+     * DATA STORE
+     * Extracted from ciclo1.pdf
+     * Data refers to 2024/2025 3rd Period results and the extracted differentials.
+     */
+    
+    const db = {
+        cycle: {
+            title: "1º Ciclo (Global)",
+            subjects: [
+                { name: "Português", l1: 0, l2: 6.39, l3: 26.47, l45: 67.14, diff_l12: -2.16, diff_l45: 3.92 },
+                { name: "Matemática", l1: 0, l2: 7.10, l3: 24.51, l45: 68.38, diff_l12: 4.46, diff_l45: 2.66 },
+                { name: "Estudo do Meio", l1: 0, l2: 3.19, l3: 18.26, l45: 78.55, diff_l12: 3.60, diff_l45: 4.79 },
+                { name: "Ed. Art", l1: 0, l2: 0.18, l3: 14.06, l45: 85.77, diff_l12: 4.67, diff_l45: 5.26 },
+                { name: "EF", l1: 0, l2: 0.18, l3: 16.55, l45: 83.27, diff_l12: 3.27, diff_l45: 0.48 },
+                { name: "Apoio Estudo", l1: 0, l2: 2.15, l3: 23.3, l45: 74.38, diff_l12: -1.47, diff_l45: 0.38 }, // Extrapolated from cycle avg
+                { name: "Inglês", l1: 0, l2: 1.96, l3: 15.14, l45: 84.86, diff_l12: -0.69, diff_l45: 4.45 }
+            ]
+        },
+        1: {
+            title: "1º Ano",
+            subjects: [
+                { name: "Português", l1: 0, l2: 10.22, l3: 21.17, l45: 68.61, diff_l12: 4.57, diff_l45: 11.57 },
+                { name: "Matemática", l1: 0, l2: 9.49, l3: 18.98, l45: 71.53, diff_l12: 2.04, diff_l45: 14.78 },
+                { name: "Estudo do Meio", l1: 0, l2: 7.25, l3: 11.59, l45: 81.16, diff_l12: 1.33, diff_l45: 13.65 },
+                { name: "Ed. Art", l1: 0, l2: 0.74, l3: 15.44, l45: 83.82, diff_l12: -0.53, diff_l45: 9.21 },
+                { name: "EF", l1: 0, l2: 0.73, l3: 13.14, l45: 86.13, diff_l12: 0.73, diff_l45: 5.85 },
+                { name: "Apoio Estudo", l1: 0, l2: 3.65, l3: 21.90, l45: 74.45, diff_l12: 4.10, diff_l45: 19.52 },
+                { name: "OC", l1: 0, l2: 0, l3: 23.36, l45: 76.64, diff_l12: 0, diff_l45: 9.74 }
+            ]
+        },
+        2: {
+            title: "2º Ano",
+            subjects: [
+                { name: "Português", l1: 0, l2: 13.48, l3: 31.21, l45: 55.32, diff_l12: 8.68, diff_l45: -13.86 },
+                { name: "Matemática", l1: 0, l2: 14.89, l3: 22.70, l45: 62.41, diff_l12: 10.78, diff_l45: -5.40 },
+                { name: "Estudo do Meio", l1: 0, l2: 4.26, l3: 21.28, l45: 74.47, diff_l12: 2.20, diff_l45: -7.72 },
+                { name: "Ed. Art", l1: 0, l2: 0, l3: 21.99, l45: 78.01, diff_l12: 0, diff_l45: -8.97 },
+                { name: "EF", l1: 0, l2: 0, l3: 26.24, l45: 73.76, diff_l12: 0, diff_l45: -12.54 },
+                { name: "Apoio Estudo", l1: 0, l2: 4.26, l3: 33.33, l45: 62.41, diff_l12: 3.57, diff_l45: -6.08 },
+                { name: "OC", l1: 0, l2: 0, l3: 19.15, l45: 80.85, diff_l12: 0, diff_l45: -11.61 }
+            ]
+        },
+        3: {
+            title: "3º Ano",
+            subjects: [
+                { name: "Português", l1: 0, l2: 2.04, l3: 28.57, l45: 69.39, diff_l12: 0.61, diff_l45: -2.04 },
+                { name: "Matemática", l1: 0, l2: 2.72, l3: 30.61, l45: 66.67, diff_l12: 2.01, diff_l45: -7.62 },
+                { name: "Estudo do Meio", l1: 0, l2: 1.36, l3: 21.09, l45: 77.55, diff_l12: 0.61, diff_l45: -6.74 },
+                { name: "Ed. Art", l1: 0, l2: 0, l3: 9.52, l45: 90.48, diff_l12: 0, diff_l45: 4.77 },
+                { name: "EF", l1: 0, l2: 0, l3: 8.22, l45: 91.78, diff_l12: 0, diff_l45: 1.78 },
+                { name: "Apoio Estudo", l1: 0, l2: 0, l3: 23.13, l45: 76.87, diff_l12: 0, diff_l45: -0.83 },
+                { name: "Inglês", l1: 0, l2: 0, l3: 10.88, l45: 89.12, diff_l12: 0, diff_l45: 14.83 }
+            ]
+        },
+        4: {
+            title: "4º Ano",
+            subjects: [
+                { name: "Português", l1: 0, l2: 0, l3: 24.64, l45: 75.36, diff_l12: -0.72, diff_l45: 9.42 },
+                { name: "Matemática", l1: 0, l2: 1.45, l3: 25.36, l45: 73.19, diff_l12: 2.17, diff_l45: 13.04 },
+                { name: "Estudo do Meio", l1: 0, l2: 0, l3: 18.84, l45: 81.16, diff_l12: 0.72, diff_l45: -9.42 },
+                { name: "Ed. Art", l1: 0, l2: 0, l3: 9.42, l45: 90.58, diff_l12: 0, diff_l45: 10.87 },
+                { name: "EF", l1: 0, l2: 0, l3: 18.84, l45: 81.16, diff_l12: 0.72, diff_l45: -8.70 },
+                { name: "Apoio Estudo", l1: 0, l2: 0, l3: 16.06, l45: 83.94, diff_l12: 1.45, diff_l45: 7.13 },
+                { name: "Inglês", l1: 0, l2: 0, l3: 19.71, l45: 80.29, diff_l12: 0, diff_l45: -0.87 }
+            ]
+        }
+    };
+
+    let state = {
+        grade: 'cycle',
+        diffMode: false
+    };
+
+    // State Management
+    function setGrade(grade) {
+        state.grade = grade;
+        updateUI();
+        
+        // Highlight active button
+        const buttons = document.querySelectorAll('.toggle-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+            // Check if the button's onclick attribute matches the selected grade
+            if (btn.getAttribute('onclick').includes(`'${grade}'`)) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    function toggleView() {
+        state.diffMode = document.getElementById('diffToggle').checked;
+        updateUI();
+    }
+
+    // Core Logic
+    function updateUI() {
+        const dataset = db[state.grade];
+        document.getElementById('chartTitle').innerText = state.diffMode 
+            ? `Diferencial 23/24 vs 24/25 - ${dataset.title}` 
+            : `Distribuição de Níveis - ${dataset.title}`;
+        
+        renderKPIs(dataset);
+        renderSidebar(dataset);
+        renderChart(dataset);
+    }
+
+    function renderKPIs(dataset) {
+        const container = document.getElementById('kpiContainer');
+        container.innerHTML = '';
+
+        if(state.diffMode) {
+            // Differential KPIs
+            const subjects = dataset.subjects;
+            let avgDiffPos = subjects.reduce((acc, s) => acc + s.diff_l45, 0) / subjects.length;
+            let avgDiffNeg = subjects.reduce((acc, s) => acc + s.diff_l12, 0) / subjects.length;
+
+            const cards = [
+                { label: 'Variação Média Qualidade (Níveis 4/5)', value: avgDiffPos, inverse: false },
+                { label: 'Variação Média Insuficiência (Níveis 1/2)', value: avgDiffNeg, inverse: true }
+            ];
+
+            cards.forEach(c => {
+                const isPositiveGood = !c.inverse; 
+                const color = c.value > 0 
+                    ? (isPositiveGood ? 'var(--success)' : 'var(--danger)')
+                    : (isPositiveGood ? 'var(--danger)' : 'var(--success)');
+                
+                const sign = c.value > 0 ? '+' : '';
+                
+                container.innerHTML += `
+                    <div class="kpi-card">
+                        <div class="kpi-label">${c.label}</div>
+                        <div class="kpi-value" style="color: ${color}">${sign}${c.value.toFixed(2)}%</div>
+                        <div style="font-size:0.8rem; color:#6b7280;">${c.value > 0 ? 'Aumento' : 'Diminuição'} face ao ano anterior</div>
+                    </div>
+                `;
+            });
+        } else {
+            // Standard KPIs
+            let avgSuccess = 0;
+            let avgQuality = 0;
+            let count = 0;
+
+            dataset.subjects.forEach(s => {
+                let success = s.l3 + s.l45;
+                avgSuccess += success;
+                avgQuality += s.l45;
+                count++;
+            });
+
+            avgSuccess /= count;
+            avgQuality /= count;
+
+            const cards = [
+                { label: 'Taxa Global de Sucesso (≥3)', value: avgSuccess, color: 'var(--primary)' },
+                { label: 'Qualidade do Sucesso (4 e 5)', value: avgQuality, color: 'var(--success)' }
+            ];
+
+            cards.forEach(c => {
+                container.innerHTML += `
+                    <div class="kpi-card">
+                        <div class="kpi-label">${c.label}</div>
+                        <div class="kpi-value">${c.value.toFixed(1)}%</div>
+                        <div class="kpi-bar-container">
+                            <div class="kpi-bar" style="width: ${c.value}%; background: ${c.color}"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    function renderSidebar(dataset) {
+        // Top 3 (Highest Quality)
+        const sortedByQuality = [...dataset.subjects].sort((a,b) => b.l45 - a.l45).slice(0,3);
+        const top3List = document.getElementById('top3List');
+        top3List.innerHTML = sortedByQuality.map(s => `
+            <li class="stat-item" style="border-left: 4px solid var(--success);">
+                <strong>${s.name}</strong>
+                <span class="badge badge-success">${s.l45.toFixed(1)}% Qualidade</span>
+            </li>
+        `).join('');
+
+        // Attention (Failure L1+L2 > 0)
+        // Includes all subjects with non-zero failure rates (even residual ones)
+        const sortedByFailure = [...dataset.subjects]
+            .filter(s => (s.l1 + s.l2) > 0)
+            .sort((a,b) => (b.l1+b.l2) - (a.l1+a.l2));
+
+        const attList = document.getElementById('attentionList');
+        
+        if (sortedByFailure.length === 0) {
+            attList.innerHTML = '<li style="font-size:0.8rem; color:var(--text-secondary);">Sem registo de níveis 1 ou 2.</li>';
+        } else {
+            attList.innerHTML = sortedByFailure.map(s => `
+                <li class="stat-item" style="border-left: 4px solid var(--danger);">
+                    <strong>${s.name}</strong>
+                    <span class="badge badge-danger">${(s.l1+s.l2).toFixed(2)}% Insuf.</span>
+                </li>
+            `).join('');
+        }
+    }
+
+    function renderChart(dataset) {
+        const container = document.getElementById('chartCanvas');
+        const legend = document.getElementById('chartLegend');
+        container.innerHTML = '';
+        legend.innerHTML = '';
+
+        const width = container.clientWidth;
+        const height = 400;
+        const barHeight = 30;
+        const gap = 20;
+        const margin = { top: 20, right: 20, bottom: 20, left: 120 };
+        
+        if (state.diffMode) {
+            // Diverging Chart
+            legend.innerHTML = `
+                <div class="legend-item"><div class="dot" style="background:var(--success)"></div>Melhoria</div>
+                <div class="legend-item"><div class="dot" style="background:var(--danger)"></div>Piora</div>
+            `;
+
+            let svgContent = '';
+            const maxVal = Math.max(...dataset.subjects.map(s => Math.abs(s.diff_l45))) * 1.2 || 10;
+            const center = (width - margin.left - margin.right) / 2 + margin.left;
+            const scale = (center - margin.left) / maxVal;
+
+            dataset.subjects.forEach((s, i) => {
+                const y = margin.top + i * (barHeight + gap);
+                const val = s.diff_l45;
+                const barWidth = Math.abs(val) * scale;
+                const x = val >= 0 ? center : center - barWidth;
+                const color = val >= 0 ? 'var(--diff-positive)' : 'var(--diff-negative)';
+
+                // Bar
+                svgContent += `<rect class="bar-rect" x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="4" 
+                    onmousemove="showTooltip(evt, '${s.name}: ${val > 0 ? '+' : ''}${val}%')" onmouseout="hideTooltip()" />`;
+                
+                // Label
+                svgContent += `<text x="${margin.left - 10}" y="${y + barHeight/1.5}" text-anchor="end" fill="#374151" font-size="12">${s.name}</text>`;
+                
+                // Value Text
+                svgContent += `<text x="${val >= 0 ? x + barWidth + 5 : x - 5}" y="${y + barHeight/1.5}" 
+                    text-anchor="${val >= 0 ? 'start' : 'end'}" fill="#6b7280" font-size="11">${val > 0 ? '+' : ''}${val.toFixed(1)}%</text>`;
+            });
+
+            // Center Line
+            svgContent += `<line x1="${center}" y1="${margin.top}" x2="${center}" y2="${height-margin.bottom}" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4"/>`;
+
+            container.innerHTML = `<svg width="100%" height="${height}">${svgContent}</svg>`;
+
+        } else {
+            // Stacked Bar Chart
+            legend.innerHTML = `
+                <div class="legend-item"><div class="dot" style="background:var(--level-4-5)"></div>Níveis 4-5</div>
+                <div class="legend-item"><div class="dot" style="background:var(--level-3)"></div>Nível 3</div>
+                <div class="legend-item"><div class="dot" style="background:var(--level-1-2)"></div>Níveis 1-2</div>
+            `;
+
+            let svgContent = '';
+            
+            dataset.subjects.forEach((s, i) => {
+                const y = margin.top + i * (barHeight + gap);
+                const chartWidth = width - margin.left - margin.right;
+                
+                const w12 = (s.l1 + s.l2) / 100 * chartWidth;
+                const w3 = s.l3 / 100 * chartWidth;
+                const w45 = s.l45 / 100 * chartWidth;
+
+                // Labels
+                svgContent += `<text x="${margin.left - 10}" y="${y + barHeight/1.5}" text-anchor="end" fill="#374151" font-size="12">${s.name}</text>`;
+
+                // Bars
+                // Red (1-2)
+                if(w12 > 0) svgContent += `<rect class="bar-rect" x="${margin.left}" y="${y}" width="${w12}" height="${barHeight}" fill="var(--level-1-2)" 
+                    onmousemove="showTooltip(evt, 'Insuficiente: ${(s.l1+s.l2).toFixed(1)}%')" onmouseout="hideTooltip()"/>`;
+                
+                // Yellow (3)
+                if(w3 > 0) svgContent += `<rect class="bar-rect" x="${margin.left + w12}" y="${y}" width="${w3}" height="${barHeight}" fill="var(--level-3)" 
+                    onmousemove="showTooltip(evt, 'Suficiente: ${s.l3.toFixed(1)}%')" onmouseout="hideTooltip()"/>`;
+
+                // Green (4-5)
+                if(w45 > 0) svgContent += `<rect class="bar-rect" x="${margin.left + w12 + w3}" y="${y}" width="${w45}" height="${barHeight}" fill="var(--level-4-5)" 
+                    onmousemove="showTooltip(evt, 'Bom/M.Bom: ${s.l45.toFixed(1)}%')" onmouseout="hideTooltip()"/>`;
+            });
+
+            container.innerHTML = `<svg width="100%" height="${height}">${svgContent}</svg>`;
+        }
+    }
+
+    // Tooltip Logic
+    function showTooltip(evt, text) {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = text;
+        tooltip.style.left = evt.pageX + 10 + 'px';
+        tooltip.style.top = evt.pageY + 10 + 'px';
+        tooltip.style.opacity = 1;
+    }
+
+    function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.style.opacity = 0;
+        setTimeout(() => tooltip.style.display = 'none', 200);
+    }
+
+    // Init
+    setGrade('cycle'); // Default view
+    window.addEventListener('resize', updateUI); // Responsive redraw
+
+</script>
+</body>
+</html>
