@@ -47,10 +47,12 @@
 
         /* Header & Controls */
         .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-card); padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .grade-toggles { display: flex; background: #f3f4f6; padding: 0.25rem; border-radius: 0.5rem; }
+        .grade-toggles { display: flex; background: #f3f4f6; padding: 0.25rem; border-radius: 0.5rem; gap: 0.25rem; }
         .toggle-btn { padding: 0.5rem 1rem; border: none; background: transparent; cursor: pointer; border-radius: 0.375rem; font-weight: 500; font-size: 0.875rem; color: var(--text-secondary); transition: all 0.2s; }
         .toggle-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         
+        .control-group { display: flex; gap: 1.5rem; align-items: center; }
+
         .view-switch { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -59,6 +61,8 @@
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(20px); }
 
+        .sort-select { padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; font-size: 0.875rem; color: var(--text-main); background: #f9fafb; cursor: pointer; }
+
         /* KPI Cards */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
         .kpi-card { background: var(--bg-card); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
@@ -66,6 +70,12 @@
         .kpi-label { font-size: 0.875rem; color: var(--text-secondary); }
         .kpi-bar-container { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 1rem; display: flex; }
         .kpi-bar { height: 100%; transition: width 0.5s ease; }
+
+        /* Level Summary Bar */
+        .summary-container { background: var(--bg-card); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; margin-top: -0.5rem; }
+        .summary-bar-wrapper { display: flex; height: 24px; border-radius: 12px; overflow: hidden; margin-top: 1rem; }
+        .summary-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; transition: width 0.5s ease; position: relative; }
+        .summary-segment:hover::after { content: attr(data-tooltip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; padding: 4px 8px; border-radius: 4px; white-space: nowrap; margin-bottom: 4px; pointer-events: none; }
 
         /* Main Chart Area */
         .chart-container { background: var(--bg-card); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px; display: flex; flex-direction: column; }
@@ -89,6 +99,7 @@
             .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
             .main-content { padding: 1rem; }
             .header-controls { flex-direction: column; align-items: stretch; }
+            .control-group { flex-direction: column; align-items: stretch; gap: 1rem; }
             .grade-toggles { overflow-x: auto; }
             .kpi-grid { grid-template-columns: 1fr; }
         }
@@ -104,7 +115,8 @@
             <p style="font-size: 0.75rem; margin-top:0.25rem;">Dados: PDF Ciclo 1</p>
         </div>
 
-        <h3>Top 3 Disciplinas</h3>
+        <h3>Top 5 - Qualidade</h3>
+        <p style="font-size: 0.7rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Disciplinas com maior % Níveis 4 e 5</p>
         <ul class="stat-list" id="top3List">
             <!-- Populated by JS -->
         </ul>
@@ -129,23 +141,45 @@
                 <button class="toggle-btn" onclick="setGrade('4')">4º Ano</button>
             </div>
 
-            <div class="view-switch">
-                <span>Vista Padrão</span>
-                <label class="switch">
-                    <input type="checkbox" id="diffToggle" onchange="toggleView()">
-                    <span class="slider"></span>
-                </label>
-                <span>Diferencial (23/24 vs 24/25)</span>
-            </div>
-            
-            <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                Ano Letivo: <strong id="currentYearDisplay">2024/2025 (3º P)</strong>
+            <div class="control-group">
+                <select id="sortSelect" class="sort-select" onchange="updateUI()">
+                    <option value="default">Ordenação Padrão</option>
+                    <option value="successDesc">Sucesso Global (Desc)</option>
+                    <option value="qualityDesc">Qualidade Sucesso (Desc)</option>
+                    <option value="failureDesc">Taxa Insucesso (Desc)</option>
+                </select>
+
+                <div class="view-switch">
+                    <span>Padrão</span>
+                    <label class="switch">
+                        <input type="checkbox" id="diffToggle" onchange="toggleView()">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Diferencial</span>
+                </div>
             </div>
         </header>
+
+        <div style="font-size: 0.875rem; color: var(--text-secondary); text-align: right; margin-top: -0.5rem;">
+            Ano Letivo: <strong id="currentYearDisplay">2024/2025 (3º P)</strong>
+        </div>
 
         <!-- KPI Cards -->
         <div class="kpi-grid" id="kpiContainer">
             <!-- Populated by JS -->
+        </div>
+
+        <!-- Summary Bar -->
+        <div class="summary-container" id="summaryContainer" style="display:none;">
+            <h3 style="margin-bottom: 0;">Resumo da Distribuição de Níveis (Média Ponderada)</h3>
+            <div class="summary-bar-wrapper" id="summaryBar">
+                <!-- Injected via JS -->
+            </div>
+            <div class="legend" style="margin-top: 0.75rem; justify-content: center;">
+                <div class="legend-item"><div class="dot" style="background:var(--level-1-2)"></div>Insuficiente (1-2)</div>
+                <div class="legend-item"><div class="dot" style="background:var(--level-3)"></div>Suficiente (3)</div>
+                <div class="legend-item"><div class="dot" style="background:var(--level-4-5)"></div>Bom/M.Bom (4-5)</div>
+            </div>
         </div>
 
         <!-- Main Chart -->
@@ -181,7 +215,7 @@
                 { name: "Estudo do Meio", l1: 0, l2: 3.19, l3: 18.26, l45: 78.55, diff_l12: 3.60, diff_l45: 4.79 },
                 { name: "Ed. Art", l1: 0, l2: 0.18, l3: 14.06, l45: 85.77, diff_l12: 4.67, diff_l45: 5.26 },
                 { name: "EF", l1: 0, l2: 0.18, l3: 16.55, l45: 83.27, diff_l12: 3.27, diff_l45: 0.48 },
-                { name: "Apoio Estudo", l1: 0, l2: 2.15, l3: 23.3, l45: 74.38, diff_l12: -1.47, diff_l45: 0.38 }, // Extrapolated from cycle avg
+                { name: "Apoio Estudo", l1: 0, l2: 2.15, l3: 23.3, l45: 74.38, diff_l12: -1.47, diff_l45: 0.38 }, // Extrapolated
                 { name: "Inglês", l1: 0, l2: 1.96, l3: 15.14, l45: 84.86, diff_l12: -0.69, diff_l45: 4.45 }
             ]
         },
@@ -237,7 +271,8 @@
 
     let state = {
         grade: 'cycle',
-        diffMode: false
+        diffMode: false,
+        sortBy: 'default'
     };
 
     // State Management
@@ -249,7 +284,6 @@
         const buttons = document.querySelectorAll('.toggle-btn');
         buttons.forEach(btn => {
             btn.classList.remove('active');
-            // Check if the button's onclick attribute matches the selected grade
             if (btn.getAttribute('onclick').includes(`'${grade}'`)) {
                 btn.classList.add('active');
             }
@@ -263,12 +297,14 @@
 
     // Core Logic
     function updateUI() {
+        state.sortBy = document.getElementById('sortSelect').value;
         const dataset = db[state.grade];
         document.getElementById('chartTitle').innerText = state.diffMode 
             ? `Diferencial 23/24 vs 24/25 - ${dataset.title}` 
             : `Distribuição de Níveis - ${dataset.title}`;
         
         renderKPIs(dataset);
+        renderSummaryBar(dataset);
         renderSidebar(dataset);
         renderChart(dataset);
     }
@@ -308,40 +344,94 @@
             // Standard KPIs
             let avgSuccess = 0;
             let avgQuality = 0;
+            let avgFailure = 0;
             let count = 0;
 
             dataset.subjects.forEach(s => {
+                let failure = s.l1 + s.l2;
                 let success = s.l3 + s.l45;
                 avgSuccess += success;
                 avgQuality += s.l45;
+                avgFailure += failure;
                 count++;
             });
 
             avgSuccess /= count;
             avgQuality /= count;
+            avgFailure /= count;
 
-            const cards = [
-                { label: 'Taxa Global de Sucesso (≥3)', value: avgSuccess, color: 'var(--primary)' },
-                { label: 'Qualidade do Sucesso (4 e 5)', value: avgQuality, color: 'var(--success)' }
-            ];
-
-            cards.forEach(c => {
-                container.innerHTML += `
-                    <div class="kpi-card">
-                        <div class="kpi-label">${c.label}</div>
-                        <div class="kpi-value">${c.value.toFixed(1)}%</div>
-                        <div class="kpi-bar-container">
-                            <div class="kpi-bar" style="width: ${c.value}%; background: ${c.color}"></div>
-                        </div>
+            // Sucesso Global
+            container.innerHTML += `
+                <div class="kpi-card">
+                    <div class="kpi-label">Taxa Global de Sucesso (≥3)</div>
+                    <div class="kpi-value">${avgSuccess.toFixed(1)}%</div>
+                    <div class="kpi-bar-container">
+                        <div class="kpi-bar" style="width: ${avgSuccess}%; background: var(--primary)"></div>
                     </div>
-                `;
-            });
+                </div>
+            `;
+
+            // Qualidade
+            container.innerHTML += `
+                <div class="kpi-card">
+                    <div class="kpi-label">Qualidade do Sucesso (4 e 5)</div>
+                    <div class="kpi-value">${avgQuality.toFixed(1)}%</div>
+                    <div class="kpi-bar-container">
+                        <div class="kpi-bar" style="width: ${avgQuality}%; background: var(--success)"></div>
+                    </div>
+                </div>
+            `;
+
+            // Insucesso (New)
+            container.innerHTML += `
+                <div class="kpi-card">
+                    <div class="kpi-label">Taxa Global de Insucesso (<3)</div>
+                    <div class="kpi-value" style="color: var(--danger);">${avgFailure.toFixed(1)}%</div>
+                    <div class="kpi-bar-container">
+                        <div class="kpi-bar" style="width: ${avgFailure}%; background: var(--danger)"></div>
+                    </div>
+                </div>
+            `;
         }
     }
 
+    function renderSummaryBar(dataset) {
+        const container = document.getElementById('summaryContainer');
+        const bar = document.getElementById('summaryBar');
+        
+        if (state.diffMode) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        
+        let totalFailure = 0;
+        let totalSufficient = 0;
+        let totalQuality = 0;
+        let count = 0;
+
+        dataset.subjects.forEach(s => {
+            totalFailure += (s.l1 + s.l2);
+            totalSufficient += s.l3;
+            totalQuality += s.l45;
+            count++;
+        });
+
+        const avgF = totalFailure / count;
+        const avgS = totalSufficient / count;
+        const avgQ = totalQuality / count;
+
+        bar.innerHTML = `
+            <div class="summary-segment" data-tooltip="Insuficiente: ${avgF.toFixed(1)}%" style="width: ${avgF}%; background: var(--level-1-2);"></div>
+            <div class="summary-segment" data-tooltip="Suficiente: ${avgS.toFixed(1)}%" style="width: ${avgS}%; background: var(--level-3);"></div>
+            <div class="summary-segment" data-tooltip="Bom/M.Bom: ${avgQ.toFixed(1)}%" style="width: ${avgQ}%; background: var(--level-4-5);"></div>
+        `;
+    }
+
     function renderSidebar(dataset) {
-        // Top 3 (Highest Quality)
-        const sortedByQuality = [...dataset.subjects].sort((a,b) => b.l45 - a.l45).slice(0,3);
+        // Top 5 (Highest Quality)
+        const sortedByQuality = [...dataset.subjects].sort((a,b) => b.l45 - a.l45).slice(0,5);
         const top3List = document.getElementById('top3List');
         top3List.innerHTML = sortedByQuality.map(s => `
             <li class="stat-item" style="border-left: 4px solid var(--success);">
@@ -351,7 +441,6 @@
         `).join('');
 
         // Attention (Failure L1+L2 > 0)
-        // Includes all subjects with non-zero failure rates (even residual ones)
         const sortedByFailure = [...dataset.subjects]
             .filter(s => (s.l1 + s.l2) > 0)
             .sort((a,b) => (b.l1+b.l2) - (a.l1+a.l2));
@@ -377,9 +466,22 @@
         legend.innerHTML = '';
 
         const width = container.clientWidth;
-        const height = 400;
+        
+        // Clone and Sort Data
+        let subjects = [...dataset.subjects];
+        
+        if (state.sortBy === 'successDesc') {
+            subjects.sort((a,b) => (b.l3 + b.l45) - (a.l3 + a.l45));
+        } else if (state.sortBy === 'qualityDesc') {
+            subjects.sort((a,b) => b.l45 - a.l45);
+        } else if (state.sortBy === 'failureDesc') {
+            subjects.sort((a,b) => (b.l1 + b.l2) - (a.l1 + a.l2));
+        }
+
+        // Adjust height based on number of items
         const barHeight = 30;
         const gap = 20;
+        const height = (subjects.length * (barHeight + gap)) + 40;
         const margin = { top: 20, right: 20, bottom: 20, left: 120 };
         
         if (state.diffMode) {
@@ -390,11 +492,11 @@
             `;
 
             let svgContent = '';
-            const maxVal = Math.max(...dataset.subjects.map(s => Math.abs(s.diff_l45))) * 1.2 || 10;
+            const maxVal = Math.max(...subjects.map(s => Math.abs(s.diff_l45))) * 1.2 || 10;
             const center = (width - margin.left - margin.right) / 2 + margin.left;
             const scale = (center - margin.left) / maxVal;
 
-            dataset.subjects.forEach((s, i) => {
+            subjects.forEach((s, i) => {
                 const y = margin.top + i * (barHeight + gap);
                 const val = s.diff_l45;
                 const barWidth = Math.abs(val) * scale;
@@ -428,7 +530,7 @@
 
             let svgContent = '';
             
-            dataset.subjects.forEach((s, i) => {
+            subjects.forEach((s, i) => {
                 const y = margin.top + i * (barHeight + gap);
                 const chartWidth = width - margin.left - margin.right;
                 
